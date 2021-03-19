@@ -1,27 +1,46 @@
 from PIL import Image
+import sys
+import numpy as np
 
 
-im = Image.open("dog.jpg").convert('L')
+def dithermatrix(size):
+    #   [[0 2], base sliding window
+    #    [3 1]]
+    baseslidingwindow=np.matrix([[0,2],[3,1]])
+    tempsize=4
+    while(tempsize!=size**2):
+        baseslidingwindow=np.block([[4*baseslidingwindow,4*baseslidingwindow+2],[4*baseslidingwindow+3,4*baseslidingwindow+1]])
+        tempsize=baseslidingwindow.size
+    return baseslidingwindow
+
+
+
+
+name=input("please enter the image path:\n")
+try:
+    im = Image.open(name).convert('L')
+except:
+    print("not such a location")
+    sys.exit(0)
 orginal_pixels = im.load()
-dithered_im=Image.new("L",(im.size[0]*2,im.size[1]*2),"black")
+slidingwindowsize=int(input("please enter size of sliding window:(2,4,8,16,...)\n"))
+if(slidingwindowsize%2!=0):
+    print("not correct window size")
+    sys.exit(0)
+    
+dithered_im=Image.new("L",(im.size[0]*slidingwindowsize,im.size[1]*slidingwindowsize),"black")
 dithered_pixels = dithered_im.load()
 
-# using [[0 2], as sliding window
-#        [3 1]]
 
-slidingwindow=[[0,2],[3,1]]
+slidingwindow=dithermatrix(slidingwindowsize)
 
 for i in range(im.size[0]):
     for j in range(im.size[1]):
         mappedvalue=orginal_pixels[i,j]/64     #maps 0-255 to [0-4)
-        if(mappedvalue>slidingwindow[0][0]):   #check threshhold for index 0,0 of sliding window
-            dithered_pixels[i*2,j*2]=255
-        if(mappedvalue>slidingwindow[0][1]):   #check threshhold for index 0,1 of sliding window
-            dithered_pixels[i*2,j*2+1]=255
-        if(mappedvalue>slidingwindow[1][0]):   #check threshhold for index 1,0 of sliding window
-            dithered_pixels[i*2+1,j*2]=255
-        if(mappedvalue>slidingwindow[1][1]):   #check threshhold for index 1,1 of sliding window
-            dithered_pixels[i*2+1,j*2+1]=255
+        for k in range(slidingwindowsize):
+            for p in range(slidingwindowsize):
+                if(mappedvalue>slidingwindow[k,p]):   #check threshhold for index k,p of sliding window
+                    dithered_pixels[i*slidingwindowsize+k,j*slidingwindowsize+p]=255
 
 dithered_im.show()
 dithered_im.save("dithered.jpg")
